@@ -1,7 +1,5 @@
 package models
 
-import java.util.Date
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Reads, Writes}
 

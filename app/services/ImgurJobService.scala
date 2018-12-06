@@ -9,6 +9,7 @@ import com.google.inject.ImplementedBy
 import javax.inject.Inject
 import models.Entities.{ImgurImageUploadResp, ImgurJob}
 import models.Responses.{ImageUploadStatus, Uploaded}
+import play.api.libs.json.{JsError, JsSuccess}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.MultipartFormData.DataPart
 import utils.ImageFileUtil
@@ -35,7 +36,7 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
   val authorizationToken  = "Bearer c2ab7e8f75abed853b0a2189f69fce0ac158e5fe"
 
   override def getImageLinks: Seq[String] = {
-    jobMap.values().asScala.flatMap(_.urlStatusMap.keys).toList
+    jobMap.values().asScala.flatMap(_.urlStatusMap.keys).toList.distinct
   }
 
   //TODO: add job not found check
@@ -70,8 +71,10 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
 
   override def processUrls(urls: Seq[String]): String = {
     val jobId = UUID.randomUUID().toString
-    addToMap(jobId, urls)
-    urls.map(ImageFileUtil.decode).foreach(_.map(processUrl))
+    Future {
+      addToMap(jobId, urls)
+      urls.foreach(url => ImageFileUtil.decode(url).map(processUrl(jobId, url, _)))
+    }
     jobId
   }
 
@@ -80,8 +83,15 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
     jobMap.put(jobId, ImgurJob(new Date(), None, urlStatusMap))
   }
 
+  private def updateUrlStatus(jobId: String, url: String, base64Img: String, status: String): Unit = {
+    val imgurJob         = jobMap.get(jobId)
+    val updatedStatusMap = imgurJob.urlStatusMap + (url -> status)
+    jobMap.put(jobId, imgurJob.copy(urlStatusMap = updatedStatusMap))
+  }
+
+  //TODO: remove println
   // side effect of uploading the image as base64 string
-  private def processUrl(base64Img: String): Unit = {
+  private def processUrl(jobId: String, url: String, base64Img: String): Unit = {
     val wsResponse: Future[WSResponse] = ws
       .url(imgurApiUrl)
       .addHttpHeaders(authorizationHeader -> authorizationToken)
@@ -90,12 +100,19 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
       case Success(response) =>
         logger.info(s"response data: ${response.body}")
         println(s"response data: ${response.body}")
-        val resp   = response.json.as[ImgurImageUploadResp]
-        val status = resp.status
-        println(s"http status: $status")
-        logger.info(s"http status: $status")
+        response.json.validate[ImgurImageUploadResp] match {
+          case resp: JsSuccess[ImgurImageUploadResp] =>
+            val status = resp.value.status
+            println(s"http status: $status")
+            logger.info(s"http status: $status")
+            updateUrlStatus(jobId, url, base64Img, "complete")
+          case e: JsError =>
+            logger.error(s"Error parsing response: ${e.errors.toString}")
+            updateUrlStatus(jobId, url, base64Img, "failed")
+        }
       case Failure(ex) =>
         logger.error(s"Error resolving Imgur API response: ${ex.getMessage}")
+        updateUrlStatus(jobId, url, base64Img, "failed")
     }
   }
 }
