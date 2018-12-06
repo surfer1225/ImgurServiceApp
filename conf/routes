@@ -1,0 +1,15 @@
+
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# An example controller showing a sample home page
+GET  /                          controllers.HomeController.index
+
+# imgur service apis
+# Gets the links of all images uploaded to Imgur. These links will be accessible by anyone.
+GET  /v1/images                 controllers.ImgurController.getImageLinks
+# Gets the status of an upload images job
+GET  /v1/images/upload/:jobId   controllers.ImgurController.getUploadJobStatus(jobId: String)
+# Submits a request to upload a set of image URLs to Imgur
+POST /v1/images/upload          controllers.ImgurController.uploadImageUrls
