@@ -39,7 +39,6 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
     jobMap.values().asScala.flatMap(_.urlStatusMap.keys).toList.distinct
   }
 
-  //TODO: add job not found check
   override def getUploadJobStatus(jobId: String): Option[ImageUploadStatus] = {
     val uploadStatus = jobMap.get(jobId)
     if (uploadStatus == null) None else Some(imgurJobToUploadStatus(jobId, jobMap.get(jobId)))
@@ -73,7 +72,7 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
     val jobId = UUID.randomUUID().toString
     Future {
       addToMap(jobId, urls)
-      urls.foreach(url => ImageFileUtil.decode(url).map(processUrl(jobId, url, _)))
+      urls.foreach(url => processUrl(jobId, url, ImageFileUtil.decode(url)))
     }
     jobId
   }

@@ -10,6 +10,11 @@
 Once you have checkout your project in your IDE,
 simply run "sbt start" to run the application or click the "run" button in Intellij IDE
 
+# Run the Application in Docker
+Simply run the following command, edit the version number as you wish
+- docker build -t imgur_service_app:v1 .
+- docker run -it -p 9000:9000 imgur_service_app:v1
+
 # Test the application
 simply run "sbt test" to run all unit tests and integration tests
 
@@ -34,3 +39,5 @@ sbt scalafmt
 
 # TODO
 - add more error handling
+- add more unit tests
+- use coursier to speed up sbt process
