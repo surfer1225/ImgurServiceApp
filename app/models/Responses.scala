@@ -8,7 +8,8 @@ import play.api.libs.json.{JsPath, Reads, Writes}
 object Responses {
   //TODO: status to enum
   case class Uploaded(pending: Seq[String], complete: Seq[String], failed: Seq[String])
-  case class ImageUploadStatus(id: String, created: Date, finished: Date, status: String, uploaded: Uploaded)
+  //ImageUploadStatus is only for contract, date fields are chosen to be string
+  case class ImageUploadStatus(id: String, created: String, finished: String, status: String, uploaded: Uploaded)
 
   //implicit reads
   implicit val uploadedReads: Reads[Uploaded] = (
@@ -19,8 +20,8 @@ object Responses {
 
   implicit val imgurImageUploadRespReads: Reads[ImageUploadStatus] = (
     (JsPath \ "id").read[String] and
-      (JsPath \ "created").read[Date] and
-      (JsPath \ "finished").read[Date] and
+      (JsPath \ "created").read[String] and
+      (JsPath \ "finished").read[String] and
       (JsPath \ "status").read[String] and
       (JsPath \ "uploaded").read[Uploaded]
   )(ImageUploadStatus.apply _)
@@ -34,8 +35,8 @@ object Responses {
 
   implicit val imgurImageUploadRespWrites: Writes[ImageUploadStatus] = (
     (JsPath \ "id").write[String] and
-      (JsPath \ "created").write[Date] and
-      (JsPath \ "finished").write[Date] and
+      (JsPath \ "created").write[String] and
+      (JsPath \ "finished").write[String] and
       (JsPath \ "status").write[String] and
       (JsPath \ "uploaded").write[Uploaded]
   )(unlift(ImageUploadStatus.unapply))

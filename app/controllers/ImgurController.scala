@@ -16,8 +16,12 @@ class ImgurController @Inject()(cc: ControllerComponents, imgurJobService: Imgur
   }
 
   def getUploadJobStatus(jobId: String): Action[AnyContent] = Action {
-    val imageUploadStatus = imgurJobService.getUploadJobStatus(jobId)
-    Ok(Json.prettyPrint(Json.toJson(imageUploadStatus)))
+    val imageUploadStatusOpt = imgurJobService.getUploadJobStatus(jobId)
+    imageUploadStatusOpt
+      .map { imageUploadStatus =>
+        Ok(Json.prettyPrint(Json.toJson(imageUploadStatus)))
+      }
+      .getOrElse(Ok("Job id not found"))
   }
 
   def uploadImageUrls: Action[AnyContent] = Action { request: Request[AnyContent] =>
@@ -27,7 +31,7 @@ class ImgurController @Inject()(cc: ControllerComponents, imgurJobService: Imgur
         (body \ "urls").validate[Seq[String]] match {
           case s: JsSuccess[Seq[String]] =>
             Ok(imgurJobService.processUrls(s.get))
-          case e: JsError =>
+          case _: JsError =>
             BadRequest("Error parsing urls as a list of string")
         }
       }

@@ -1,5 +1,6 @@
 package services
 
+import java.text.SimpleDateFormat
 import java.util.concurrent.ConcurrentHashMap
 import java.util.{Date, UUID}
 
@@ -21,7 +22,7 @@ import scala.util.{Failure, Success}
 trait ImgurJobService {
   def getImageLinks: Seq[String]
   def processUrls(base64Img: Seq[String]): String
-  def getUploadJobStatus(jobId: String): ImageUploadStatus
+  def getUploadJobStatus(jobId: String): Option[ImageUploadStatus]
 }
 
 class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with ImgurLogger {
@@ -34,23 +35,37 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
   val authorizationToken  = "Bearer c2ab7e8f75abed853b0a2189f69fce0ac158e5fe"
 
   override def getImageLinks: Seq[String] = {
-    jobMap.values().asScala.flatMap(_.urlStatusMap.values).toList
+    jobMap.values().asScala.flatMap(_.urlStatusMap.keys).toList
   }
 
-  override def getUploadJobStatus(jobId: String): ImageUploadStatus =
-    imgurJobToUploadStatus(jobId, jobMap.get(jobId))
+  //TODO: add job not found check
+  override def getUploadJobStatus(jobId: String): Option[ImageUploadStatus] = {
+    val uploadStatus = jobMap.get(jobId)
+    if (uploadStatus == null) None else Some(imgurJobToUploadStatus(jobId, jobMap.get(jobId)))
+  }
 
   private def imgurJobToUploadStatus(jobId: String, imgurJob: ImgurJob): ImageUploadStatus = {
     val statusUrlMap = imgurJob.urlStatusMap.groupBy(_._2).map {
       case (status, statusMap) => (status, statusMap.keys.toList)
     }
-    val uploaded = Uploaded(statusUrlMap("pending"), statusUrlMap("complete"), statusUrlMap("failed"))
+    val uploaded = Uploaded(
+      statusUrlMap.getOrElse("pending", Nil),
+      statusUrlMap.getOrElse("complete", Nil),
+      statusUrlMap.getOrElse("failed", Nil)
+    )
     val uploadStatus = uploaded match {
       case Uploaded(Nil, _, _)    => "complete"
       case Uploaded(_, Nil, Nil)  => "pending"
       case Uploaded(_ :: _, _, _) => "in-progress"
     }
-    ImageUploadStatus(jobId, imgurJob.created, imgurJob.finished.getOrElse(null), uploadStatus, uploaded)
+    val dateFormatter = new SimpleDateFormat("YYYY-mm-dd'T'hh:mm:ssZ")
+    ImageUploadStatus(
+      jobId,
+      dateFormatter.format(imgurJob.created),
+      imgurJob.finished.map(_.toString).getOrElse(null),
+      uploadStatus,
+      uploaded
+    )
   }
 
   override def processUrls(urls: Seq[String]): String = {
