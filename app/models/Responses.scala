@@ -3,7 +3,7 @@ package models
 import java.util.Date
 
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.{JsPath, Reads, Writes}
 
 object Responses {
   //TODO: status to enum
@@ -24,4 +24,19 @@ object Responses {
       (JsPath \ "status").read[String] and
       (JsPath \ "uploaded").read[Uploaded]
   )(ImageUploadStatus.apply _)
+
+  //implicit writes
+  implicit val uploadedWrites: Writes[Uploaded] = (
+    (JsPath \ "pending").write[Seq[String]] and
+      (JsPath \ "complete").write[Seq[String]] and
+      (JsPath \ "failed").write[Seq[String]]
+  )(unlift(Uploaded.unapply))
+
+  implicit val imgurImageUploadRespWrites: Writes[ImageUploadStatus] = (
+    (JsPath \ "id").write[String] and
+      (JsPath \ "created").write[Date] and
+      (JsPath \ "finished").write[Date] and
+      (JsPath \ "status").write[String] and
+      (JsPath \ "uploaded").write[Uploaded]
+  )(unlift(ImageUploadStatus.unapply))
 }
