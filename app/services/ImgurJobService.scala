@@ -9,6 +9,7 @@ import com.google.inject.ImplementedBy
 import javax.inject.Inject
 import models.Entities.{ImgurImageUploadResp, ImgurJob}
 import models.Responses.{ImageUploadStatus, Uploaded}
+import play.api.Configuration
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.MultipartFormData.DataPart
@@ -26,14 +27,14 @@ trait ImgurJobService {
   def getUploadJobStatus(jobId: String): Option[ImageUploadStatus]
 }
 
-class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with ImgurLogger {
+class ImgurJobServiceImpl @Inject()(ws: WSClient, config: Configuration) extends ImgurJobService with ImgurLogger {
 
   val jobMap: ConcurrentHashMap[String, ImgurJob] = new ConcurrentHashMap[String, ImgurJob]()
 
-  //TODO: move all this to config
-  val imgurApiUrl         = "https://api.imgur.com/3/image"
-  val authorizationHeader = "Authorization"
-  val authorizationToken  = "Bearer c2ab7e8f75abed853b0a2189f69fce0ac158e5fe"
+  private val configHelper        = config.get[String] _
+  private val imgurApiUrl         = configHelper("imgur.api.url")
+  private val authorizationHeader = configHelper("imgur.authorization.header")
+  private val authorizationToken  = configHelper("imgur.authorization.token")
 
   override def getImageLinks: Seq[String] = {
     jobMap.values().asScala.flatMap(_.urlStatusMap.keys).toList.distinct
@@ -88,7 +89,6 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
     jobMap.put(jobId, imgurJob.copy(urlStatusMap = updatedStatusMap))
   }
 
-  //TODO: remove println
   // side effect of uploading the image as base64 string
   private def processUrl(jobId: String, url: String, base64Img: String): Unit = {
     val wsResponse: Future[WSResponse] = ws
@@ -98,11 +98,9 @@ class ImgurJobServiceImpl @Inject()(ws: WSClient) extends ImgurJobService with I
     wsResponse.onComplete {
       case Success(response) =>
         logger.info(s"response data: ${response.body}")
-        println(s"response data: ${response.body}")
         response.json.validate[ImgurImageUploadResp] match {
           case resp: JsSuccess[ImgurImageUploadResp] =>
             val status = resp.value.status
-            println(s"http status: $status")
             logger.info(s"http status: $status")
             updateUrlStatus(jobId, url, base64Img, "complete")
           case e: JsError =>

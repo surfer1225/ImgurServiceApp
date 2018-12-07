@@ -4,7 +4,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsPath, Reads, Writes}
 
 object Responses {
-  //TODO: status to enum
   case class Uploaded(pending: Seq[String], complete: Seq[String], failed: Seq[String])
   //ImageUploadStatus is only for contract, date fields are chosen to be string
   case class ImageUploadStatus(id: String, created: String, finished: String, status: String, uploaded: Uploaded)
