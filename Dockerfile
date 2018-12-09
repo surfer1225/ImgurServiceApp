@@ -1,19 +1,9 @@
 FROM openjdk:8
 
-ENV SBT_VERSION 0.13.17
-
-RUN \
-  curl -L -o sbt-$SBT_VERSION.deb http://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb && \
-  dpkg -i sbt-$SBT_VERSION.deb && \
-  rm sbt-$SBT_VERSION.deb && \
-  apt-get update && \
-  apt-get install sbt && \
-  sbt sbtVersion
-
-WORKDIR /ImgurServiceApp
+WORKDIR /ImgurServiceApp/target/universal
 
 COPY . /ImgurServiceApp
 
 EXPOSE 9000
 
-CMD sbt run
+CMD ./imgurserviceapp-1.0/bin/imgurserviceapp -Dplay.http.secret.key=test
