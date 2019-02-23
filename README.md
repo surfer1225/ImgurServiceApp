@@ -40,13 +40,11 @@ sbt scalafmt
 
 # Other Information
 - may consider actor pattern for submitting the image
-- due to time constraint, there is no time to test concurrent performance, default execution is used for all
-- log setting is not configured, code is just to illustrate how some logging should be done 
+- log setting is not configured, code is just to illustrate how some logging should be done
 
 # TODO
 - add more error handling
 - add more unit tests
 - use coursier to speed up sbt process
 - add swagger for api documentation
-- .gitlab-ci.yml file can be added to run CICD
 - extract threading related config e.g. number of threads in config to application.properties
